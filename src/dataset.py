@@ -3,7 +3,17 @@
 from torch.utils.data import Dataset
 import torch
 import os
+import sys
+
+# -------------------------
+# Fix import paths
+# -------------------------
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if ROOT_DIR not in sys.path:
+    sys.path.append(ROOT_DIR)
+
 from utils.srm_filters import extract_residual
+from src.config import Config
 
 
 class VAEDataset(Dataset):
@@ -11,8 +21,8 @@ class VAEDataset(Dataset):
         self.files = [line.strip() for line in open(file_list)]
         self.with_labels = with_labels
 
-        # 🔥 Base directory where your dataset actually lives
-        self.base_dir = r"E:\SecurePix_Dataset"
+        # Base directory where dataset actually lives
+        self.base_dir = Config.DATASET_DIR
 
     def __len__(self):
         return len(self.files)
