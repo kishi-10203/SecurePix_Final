@@ -12,6 +12,12 @@ class Config:
     # Git - Untracked Dataset Directory
     DATASET_DIR =  r"D:\Final_Year_Project\SecurePix_Dataset"
 
+    #Training\Testing|Validation Dataset files - .txt
+    VAE_TRAINING_DATASET = r"D:\Final_Year_Project\SecurePix_Final\data\train.txt"
+    VAE_TESTING_DATASET = r"D:\Final_Year_Project\SecurePix_Final\data\test.txt"
+    VAE_VALIDATION_DATASET = r"D:\Final_Year_Project\SecurePix_Final\data\val.txt"
+
+
     # Clean img - VAE feed Directory
     SOURCE_DATA_DIR = r"D:\Final_Year_Project\SecurePix_Dataset\CLEAN_IMGAES"
 
@@ -25,11 +31,10 @@ class Config:
     RESULTS_DIR = r"D:\Final_Year_Project\SecurePix_Final\results"
 
     #Execution Output Directory
-    EXECUTION_DIR = f"{ROOT_DIR}\\results\\execution_output"
+    EXECUTION_DIR = r"D:\Final_Year_Project\SecurePix_Final\results\execution_output"
 
     # ==========================
-    # VAE settings
-    # ==========================
+    # VAE settin"D:\Final_Year_Project\SecurePix_Final\results\execution_output"    # ==========================
     IMG_CHANNELS = 30
     IMG_HEIGHT = 50
     IMG_WIDTH = 200
