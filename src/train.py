@@ -20,24 +20,24 @@ logger = logging.getLogger("VAE_Train")
 def main():
     # Ensure dirs
     Config.ensure_dirs()
-    logger.info("Initializing training...")
+    logger.info(f"Initializing training | Training Mode : {Config.DEVICE} | Model Name : {Config.CHECKPOINT_NAME} ")
 
     # Dataset
-    logger.info("Loading dataset...")
-    train_dataset = VAEDataset("E:\\SecurePix\\data\\train.txt")
+    logger.info("Loading dataset | File Name : train.txt")
+    train_dataset = VAEDataset(Config.VAE_TRAINING_DATASET)
     train_loader = DataLoader(train_dataset, batch_size=Config.BATCH_SIZE, shuffle=True)
 
     # Model
-    logger.info("Building model...")
+    logger.info(f"Building model | Model Checkpoint : {Config.CHECKPOINT_NAME}")
     model = VAE(input_channels=train_dataset[0].shape[0], latent_dim=Config.LATENT_DIM)
     model = model.to(Config.DEVICE)
 
     # Optimizer
-    logger.info("Building optimizer...")
+    logger.info("Building optimizer | ADAM ")
     optimizer = Adam(model.parameters(), lr=Config.LEARNING_RATE)
 
     # Training loop
-    logger.info("Starting training...")
+    logger.info("Starting training ")
     for epoch in range(Config.EPOCHS):
         model.train()
         total_loss = 0
@@ -52,7 +52,7 @@ def main():
         logger.info(f"Epoch {epoch+1}/{Config.EPOCHS}, Loss: {total_loss/len(train_loader)}")
 
     # Save checkpoint
-    logger.info("Saving model checkpoint...")
+    logger.info("Saving model checkpoint")
     ckpt_path = os.path.join(Config.CHECKPOINTS_DIR, Config.CHECKPOINT_NAME)
     torch.save(model.state_dict(), ckpt_path)
     logger.info(f"Training complete. Model saved at {ckpt_path}")

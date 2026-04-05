@@ -4,6 +4,7 @@ import os
 import sys
 import torch
 import numpy as np
+import logging
 import matplotlib.pyplot as plt
 from PIL import Image
 from reportlab.pdfgen import canvas
@@ -20,20 +21,25 @@ from model.vae_2 import VAE
 from src.config import Config
 
 
+# Setup logging
+logging.basicConfig(level=Config.LOG_LEVEL)
+logger = logging.getLogger("VAE_TEST")
+
+
 # -------------------------
 # Hardcoded Test Images
 # -------------------------
 TEST_IMAGES = [
-    ("E:\\SecurePix_Dataset\\CLEAN_IMGAES\\6e2dg.png", 0),
-    ("E:\\SecurePix_Dataset\\CLEAN_IMGAES\\3p67n.png", 0),
-    ("E:\\SecurePix_Dataset\\CLEAN_IMGAES\\25w53.png", 0),
-    ("E:\\SecurePix_Dataset\\CLEAN_IMGAES\\gcx6f.png", 0),
-    ("E:\\SecurePix_Dataset\\CLEAN_IMGAES\\y5dpp.png", 0),
-    ("E:\\SecurePix_Dataset\\CLEAN_IMGAES\\w2n7e.png", 0),
-    ("E:\\SecurePix_Dataset\\STEG_LSB1_IMAGES\\gnc3n.png", 1),
-    ("E:\\SecurePix_Dataset\\STEG_LSB1_IMAGES\\d66cn.png", 1),
-    ("E:\\SecurePix_Dataset\\STEG_LSB3_IMAGES\\efe62.png", 1),
-    ("E:\\SecurePix_Dataset\\STEG_LSB3_IMAGES\\ddcne.png", 1)
+    ("D:\\Final_Year_Project\\SecurePix_Dataset\\CLEAN_IMGAES\\6e2dg.png", 0),
+    ("D:\\Final_Year_Project\\SecurePix_Dataset\\CLEAN_IMGAES\\3p67n.png", 0),
+    ("D:\\Final_Year_Project\\SecurePix_Dataset\\CLEAN_IMGAES\\25w53.png", 0),
+    ("D:\\Final_Year_Project\\SecurePix_Dataset\\CLEAN_IMGAES\\gcx6f.png", 0),
+    ("D:\\Final_Year_Project\\SecurePix_Dataset\\CLEAN_IMGAES\\y5dpp.png", 0),
+    ("D:\\Final_Year_Project\\SecurePix_Dataset\\CLEAN_IMGAES\\w2n7e.png", 0),
+    ("D:\\Final_Year_Project\\SecurePix_Dataset\\STEG_LSB1_IMAGES\\gnc3n.png", 1),
+    ("D:\\Final_Year_Project\\SecurePix_Dataset\\STEG_LSB1_IMAGES\\d66cn.png", 1),
+    ("D:\\Final_Year_Project\\SecurePix_Dataset\\STEG_LSB3_IMAGES\\efe62.png", 1),
+    ("D:\\Final_Year_Project\\SecurePix_Dataset\\STEG_LSB3_IMAGES\\ddcne.png", 1)
 ]
 
 # -------------------------
@@ -79,6 +85,7 @@ def save_reconstruction(x, x_hat, file_name):
 # -------------------------
 # Load Model
 # -------------------------
+logger.info(f"Loading Model | Execution Mode : {Config.DEVICE} |Model Name : {Config.CHECKPOINT_NAME}")
 model = VAE(input_channels=Config.IMG_CHANNELS, latent_dim=Config.LATENT_DIM)
 model.load_state_dict(torch.load(
     os.path.join(Config.CHECKPOINTS_DIR, Config.CHECKPOINT_NAME),
@@ -91,6 +98,8 @@ model.eval()
 # Compute Threshold
 # -------------------------
 # For demo, using mean + 2*std of clean images in this batch
+logger.info("Computing Reconstruction Losses")
+
 clean_errors = []
 for img_path, label in TEST_IMAGES:
     if label == 0:
@@ -104,6 +113,8 @@ threshold = np.mean(clean_errors) + 2 * np.std(clean_errors)
 # -------------------------
 # PDF Report Setup
 # -------------------------
+logger.info("Processing Report PDF")
+
 pdf_path = os.path.join(Config.RESULTS_DIR, "test_1.pdf")
 os.makedirs(Config.RESULTS_DIR, exist_ok=True)
 pdf = canvas.Canvas(pdf_path, pagesize=letter)

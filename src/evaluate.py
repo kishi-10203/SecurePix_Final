@@ -84,7 +84,7 @@ def save_reconstruction_images(x, x_hat, save_path, idx):
 # ==========================
 def main():
 
-    logger.info("Starting evaluation...")
+    logger.info("Starting evaluation |")
 
     os.makedirs(Config.RESULTS_DIR, exist_ok=True)
 
@@ -92,7 +92,7 @@ def main():
     # Dataset (must return labels)
     # -------------------------
     dataset = VAEDataset(
-        os.path.join("E:\\SecurePix\\data\\test.txt"),
+        os.path.join(Config.VAE_TESTING_DATASET),
         with_labels=True
     )
 
@@ -101,7 +101,7 @@ def main():
     # -------------------------
     # Load Model
     # -------------------------
-    logger.info("Loading model checkpoint...")
+    logger.info(F"Loading model checkpoint | Execution Mode {Config.DEVICE} | Model Nmae : {Config.CHECKPOINT_NAME}")
     model = VAE(input_channels=Config.IMG_CHANNELS, latent_dim=Config.LATENT_DIM)
     model.load_state_dict(
         torch.load(
@@ -155,7 +155,7 @@ def main():
     # -------------------------
     # Metrics
     # -------------------------
-    logger.info("Calculating metrics...")
+    logger.info("Calculating metrics")
     acc = accuracy_score(labels, preds)
     prec = precision_score(labels, preds, zero_division=0)
     rec = recall_score(labels, preds, zero_division=0)
@@ -164,6 +164,7 @@ def main():
     fpr, tpr, _ = roc_curve(labels, scores)
     roc_auc = auc(fpr, tpr)
 
+    print("\n\n")
     logger.info(f"Accuracy: {acc:.4f}")
     logger.info(f"Precision: {prec:.4f}")
     logger.info(f"Recall: {rec:.4f}")
@@ -173,20 +174,20 @@ def main():
     # -------------------------
     # ROC Curve
     # -------------------------
-    logger.info("Generating ROC curve...")
+    logger.info("Generating ROC curve")
     plt.figure()
     plt.plot(fpr, tpr, label=f"AUC={roc_auc:.3f}")
     plt.plot([0,1],[0,1],'--')
     plt.legend()
     plt.title("ROC Curve")
-    roc_path = os.path.join(Config.RESULTS_DIR, "roc.png")
+    roc_path = os.path.join(Config.RESULTS_DIR, "ROC_Curve.png")
     plt.savefig(roc_path)
     plt.close()
 
     # -------------------------
     # Histogram
     # -------------------------
-    logger.info("Generating error distribution histogram...")
+    logger.info("Generating error distribution histogram")
     stego_scores = scores[labels == 1]
 
     plt.figure()
@@ -195,28 +196,28 @@ def main():
     plt.axvline(threshold, color='r', label="Threshold")
     plt.legend()
     plt.title("Error Distribution")
-    hist_path = os.path.join(Config.RESULTS_DIR, "hist.png")
+    hist_path = os.path.join(Config.RESULTS_DIR, "Error_Distribution_Histogram.png")
     plt.savefig(hist_path)
     plt.close()
 
     # -------------------------
     # Confusion Matrix
     # -------------------------
-    logger.info("Generating confusion matrix...")
+    logger.info("Generating confusion matrix")
     cm = confusion_matrix(labels, preds)
 
     plt.figure()
     plt.imshow(cm, cmap="Blues")
     plt.title("Confusion Matrix")
     plt.colorbar()
-    cm_path = os.path.join(Config.RESULTS_DIR, "cm.png")
+    cm_path = os.path.join(Config.RESULTS_DIR, "Confusion_Matrix.png")
     plt.savefig(cm_path)
     plt.close()
 
     # -------------------------
     # PDF REPORT
     # -------------------------
-    logger.info("Generating PDF report...")
+    logger.info("Generating report")
     pdf_path = os.path.join(Config.RESULTS_DIR, "report.pdf")
     pdf = canvas.Canvas(pdf_path, pagesize=letter)
 

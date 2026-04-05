@@ -46,6 +46,7 @@ model.eval()
 print("\n" * 2)
 
 logging.info("Model loaded and set to evaluation mode.")
+logging.info(f"Execution Mode : {Config.DEVICE}")
 
 # -------------------------
 # Utility: Load & preprocess image
