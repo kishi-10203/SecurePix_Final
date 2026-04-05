@@ -1,8 +1,10 @@
-# model/vae.py
-import os
-import sys
+# model/vae_2.py
+
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+import numpy as np
+
 
 # -------------------------
 # Fix import paths
@@ -11,103 +13,95 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT_DIR not in sys.path:
     sys.path.append(ROOT_DIR)
 
+
 from src.config import Config
 
-cfg = Config()
+
+
+
+
 
 class VAE(nn.Module):
-    def __init__(self, latent_dim=cfg.LATENT_DIM, input_channels=cfg.IMG_CHANNELS, device=cfg.DEVICE):
+    def __init__(self):
         super(VAE, self).__init__()
-        self.latent_dim = latent_dim
-        self.device = device
 
-        # --------------------
-        # Encoder
-        # --------------------
-        # Input: [batch, 30, 50, 200]
-        self.encoder = nn.Sequential(
-            nn.Conv2d(input_channels, 64, kernel_size=4, stride=2, padding=1),  # 50x200 -> 25x100
-            nn.BatchNorm2d(64),
-            nn.LeakyReLU(0.1, inplace=True),
-
-            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1),             # 25x100 -> 13x50
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.1, inplace=True),
-
-            nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1),            # 13x50 -> 7x25
-            nn.BatchNorm2d(256),
-            nn.LeakyReLU(0.1, inplace=True)
+        # -----------------------
+        # Convolutional Encoder
+        # -----------------------
+        self.conv_layers = nn.Sequential(
+            nn.Conv2d(Config.IMG_CHANNELS, 64, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1),
+            nn.ReLU()
         )
 
-        # Flatten features for latent space
-        self.flatten = nn.Flatten()
-        conv_output_size = 256 * 7 * 25  # channels * H * W after conv stack
-        self.fc_mu = nn.Linear(conv_output_size, latent_dim)
-        self.fc_logvar = nn.Linear(conv_output_size, latent_dim)
+        # -----------------------
+        # Compute dynamic flattened size
+        # -----------------------
+        self._conv_output_size = self._get_conv_output_size()
+        
+        # -----------------------
+        # Linear layers for latent vectors
+        # -----------------------
+        self.fc_mu = nn.Linear(self._conv_output_size, Config.LATENT_DIM)
+        self.fc_logvar = nn.Linear(self._conv_output_size, Config.LATENT_DIM)
 
-        # --------------------
+        # -----------------------
         # Decoder
-        # --------------------
-        self.fc_dec = nn.Linear(latent_dim, conv_output_size)
-
-        self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),  # 7x25 -> 14x50
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.1, inplace=True),
-
-            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),   # 14x50 -> 28x100
-            nn.BatchNorm2d(64),
-            nn.LeakyReLU(0.1, inplace=True),
-
-            nn.ConvTranspose2d(64, input_channels, kernel_size=4, stride=2, padding=1),  # 28x100 -> 56x200
-            nn.Tanh()  # Output normalized [-1,1]
+        # -----------------------
+        self.decoder_input = nn.Linear(Config.LATENT_DIM, self._conv_output_size)
+        self.deconv_layers = nn.Sequential(
+            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(64, Config.IMG_CHANNELS, kernel_size=4, stride=2, padding=1),
+            nn.Tanh()  # Because residuals are in [-1,1]
         )
 
-        # Move model to device
-        self.to(self.device)
+    # -----------------------
+    # Helper: compute conv output size dynamically
+    # -----------------------
+    def _get_conv_output_size(self):
+        dummy = torch.zeros(1, Config.IMG_CHANNELS, Config.IMG_HEIGHT, Config.IMG_WIDTH)
+        out = self.conv_layers(dummy)
+        return int(np.prod(out.size()))
 
-    # --------------------
-    # Encoder → Latent → Decoder
-    # --------------------
+    # -----------------------
+    # Encoder
+    # -----------------------
     def encode(self, x):
-        x = self.encoder(x)
-        x = self.flatten(x)
-        mu = self.fc_mu(x)
-        logvar = self.fc_logvar(x)
+        x = self.conv_layers(x)
+        x_flat = x.view(x.size(0), -1)
+        mu = self.fc_mu(x_flat)
+        logvar = self.fc_logvar(x_flat)
         return mu, logvar
 
+    # -----------------------
+    # Reparameterization
+    # -----------------------
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
         eps = torch.randn_like(std)
         return mu + eps * std
 
+    # -----------------------
+    # Decoder
+    # -----------------------
     def decode(self, z):
-        x = self.fc_dec(z)
-        x = x.view(-1, 256, 7, 25)
-        x = self.decoder(x)
-        # crop to exact height=50 if needed
-        x = x[:, :, :cfg.IMG_HEIGHT, :cfg.IMG_WIDTH]
+        x = self.decoder_input(z)
+        x = x.view(x.size(0), 256, 
+                   Config.IMG_HEIGHT // 8, Config.IMG_WIDTH // 8)  # match conv downsampling
+        x = self.deconv_layers(x)
         return x
 
+    # -----------------------
+    # Forward pass
+    # -----------------------
     def forward(self, x):
-        x = x.to(self.device)
         mu, logvar = self.encode(x)
         z = self.reparameterize(mu, logvar)
-        x_hat = self.decode(z)
-        return x_hat, mu, logvar
-
-    # --------------------
-    # Convenience functions
-    # --------------------
-    def infer(self, x):
-        self.eval()
-        x = x.to(self.device)
-        with torch.no_grad():
-            x_hat, mu, logvar = self.forward(x)
-        return x_hat, mu, logvar
-
-    def set_train_mode(self):
-        self.train()
-
-    def set_eval_mode(self):
-        self.eval()
+        recon = self.decode(z)
+        return recon, mu, logvar
