@@ -40,7 +40,7 @@ class Config:
     # ==========================
     BATCH_SIZE = 32
     LEARNING_RATE = 1e-4
-    EPOCHS = 50
+    EPOCHS = 2 #50 - reduced for testing
     BETA = 1.0
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     RANDOM_SEED = 42
